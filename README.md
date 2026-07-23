@@ -107,6 +107,14 @@ For a VM whose firewall/security group only allows SSH (22) and HTTPS (443) inbo
 
 **Prerequisites**: a domain name with DNS already pointed at the VM's public IP (Let's Encrypt cannot issue a certificate for a bare IP), and Docker + Docker Compose installed.
 
+**No domain yet, only the VM's IP?** This matters for more than the padlock icon: modern browsers only allow `navigator.geolocation` — the API this whole app runs on — on a secure context (HTTPS, or `localhost`). Serving over plain HTTP on a public IP would likely get location sharing silently blocked by the browser, breaking the core feature. Rather than skip HTTPS, use **[sslip.io](https://sslip.io)**: a free service that maps a hostname like `203.0.113.10.sslip.io` directly to that IP via DNS. It presents as a normal domain to Let's Encrypt, so you get a real, browser-trusted certificate with no warnings — just set:
+
+```
+DOMAIN=<your-vm-public-ip-with-dots>.sslip.io
+```
+
+in `.env` and follow the steps below exactly as written; nothing else changes. The trade-off is a dependency on a third-party free DNS service — swap in a real domain the same way (just change `DOMAIN` and re-run the bootstrap script) once you have one.
+
 ```bash
 git clone <this repo> && cd BJIT-Transportation-System
 cp .env.example .env
