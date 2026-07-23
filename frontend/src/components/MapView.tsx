@@ -1,4 +1,4 @@
-import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, Polyline, Tooltip, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import type { LatLng, LocationRecord, RouteStop } from "../types";
 
@@ -48,27 +48,27 @@ export function MapView({ stops, path, drivers = [], riders = [], height = "60vh
 
         {stops.map((stop) => (
           <Marker key={stop.id} position={[stop.lat, stop.lng]} icon={stopIcon}>
-            <Popup>{stop.name}</Popup>
+            <Tooltip direction="top" offset={[0, -8]}>{stop.name}</Tooltip>
           </Marker>
         ))}
 
         {drivers.map((driver) => (
           <Marker key={driver.userId} position={[driver.lat, driver.lng]} icon={busIcon}>
-            <Popup>
+            <Tooltip direction="top" offset={[0, -12]}>
               Bus &middot; {driver.employeeId}
               <br />
               Updated {new Date(driver.updatedAt).toLocaleTimeString()}
-            </Popup>
+            </Tooltip>
           </Marker>
         ))}
 
         {riders.map((rider) => (
           <Marker key={rider.userId} position={[rider.lat, rider.lng]} icon={riderIcon}>
-            <Popup>
+            <Tooltip direction="top" offset={[0, -10]}>
               Waiting &middot; {rider.employeeId}
               <br />
               Updated {new Date(rider.updatedAt).toLocaleTimeString()}
-            </Popup>
+            </Tooltip>
           </Marker>
         ))}
       </MapContainer>
