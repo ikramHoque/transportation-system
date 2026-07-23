@@ -14,6 +14,7 @@ export function RiderDashboard() {
   const [stops, setStops] = useState<RouteStop[]>([]);
   const [drivers, setDrivers] = useState<LocationRecord[]>([]);
   const [isWaiting, setIsWaiting] = useState(false);
+  const [outOfRangeMessage, setOutOfRangeMessage] = useState<string | null>(null);
 
   const { position, error: geoError } = useGeolocation({ enabled: isWaiting, intervalMs: 6000 });
 
@@ -28,10 +29,15 @@ export function RiderDashboard() {
     function handleDriverLocation(record: LocationRecord) {
       setDrivers((prev) => [...prev.filter((d) => d.userId !== record.userId), record]);
     }
+    function handleOutOfRange(payload: { message: string }) {
+      setOutOfRangeMessage(payload.message);
+    }
 
     socket.on("driver:location", handleDriverLocation);
+    socket.on("location:outOfRange", handleOutOfRange);
     return () => {
       socket.off("driver:location", handleDriverLocation);
+      socket.off("location:outOfRange", handleOutOfRange);
     };
   }, [socket]);
 
@@ -39,10 +45,12 @@ export function RiderDashboard() {
   // waiting" using the last known fix) or whenever a fresh position comes in.
   useEffect(() => {
     if (!socket || !position) return;
+    setOutOfRangeMessage(null);
     socket.emit("location:update", { lat: position.lat, lng: position.lng, isWaiting });
   }, [socket, position, isWaiting]);
 
   const handleToggle = useCallback(() => {
+    setOutOfRangeMessage(null);
     setIsWaiting((prev) => !prev);
   }, []);
 
@@ -61,6 +69,7 @@ export function RiderDashboard() {
       {isWaiting && !position && !geoError && (
         <div className="alert alert--info">Getting your location...</div>
       )}
+      {isWaiting && outOfRangeMessage && <div className="alert alert--error">{outOfRangeMessage}</div>}
 
       <div className="dashboard__stats">
         <StatCard

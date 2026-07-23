@@ -1,4 +1,6 @@
 import { pool } from "../../db/pool";
+import { ROUTE_GEOFENCE_RADIUS_METERS, ROUTE_STOPS } from "../../config/route";
+import { distanceToPathMeters } from "../../utils/geo";
 import type { AuthenticatedUser, LocationRecord } from "../../types";
 import type { LocationUpdateInput } from "./location.schemas";
 
@@ -27,11 +29,26 @@ function toRecord(row: LocationRow): LocationRecord {
   };
 }
 
+export interface UpsertLocationResult {
+  record: LocationRecord;
+  /** True when the rider requested isWaiting=true but was too far from the route to count. */
+  rejectedOutOfRange: boolean;
+}
+
+/** Rider locations further than this from the route polyline are never counted as "waiting". */
+function isWithinRouteGeofence(lat: number, lng: number): boolean {
+  const distance = distanceToPathMeters({ lat, lng }, ROUTE_STOPS);
+  return distance <= ROUTE_GEOFENCE_RADIUS_METERS;
+}
+
 export async function upsertLocation(
   user: AuthenticatedUser,
   input: LocationUpdateInput,
-): Promise<LocationRecord> {
-  const isWaiting = user.role === "driver" ? true : Boolean(input.isWaiting);
+): Promise<UpsertLocationResult> {
+  const requestedWaiting = user.role === "driver" ? true : Boolean(input.isWaiting);
+  const rejectedOutOfRange =
+    user.role !== "driver" && requestedWaiting && !isWithinRouteGeofence(input.lat, input.lng);
+  const isWaiting = rejectedOutOfRange ? false : requestedWaiting;
 
   const result = await pool.query<LocationRow>(
     `INSERT INTO locations (user_id, employee_id, role, lat, lng, is_waiting, updated_at)
@@ -42,7 +59,7 @@ export async function upsertLocation(
     [user.id, user.employeeId, user.role, input.lat, input.lng, isWaiting],
   );
 
-  return toRecord(result.rows[0]);
+  return { record: toRecord(result.rows[0]), rejectedOutOfRange };
 }
 
 export async function getActiveDrivers(): Promise<LocationRecord[]> {

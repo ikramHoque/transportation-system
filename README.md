@@ -37,6 +37,7 @@ Real-time design:
 - A **rider** (engineer/staff) shares their GPS position + a "waiting" flag the same way. The server persists it and broadcasts `waiting:update` (count + roster) only to the `driver` and `admin` roles — that's the "dispatch" room.
 - REST endpoints (`GET /api/location/*`) provide the same data for the initial page load / refresh, filtering out stale rows (no update in the last 2 minutes) so a forgotten browser tab doesn't show as "still waiting" forever.
 - Only one source of truth: a `locations` table holds the *current* location per user (not a history log) — the same row is upserted on every update, from both the socket handler and the REST reads.
+- **Route geofence**: a rider's `isWaiting` flag is only honored server-side if their reported position is within `ROUTE_GEOFENCE_RADIUS_METERS` (default 500m, in `backend/src/config/route.ts`) of the route polyline — computed via point-to-segment distance in `backend/src/utils/geo.ts`. Someone opening the app away from the route (e.g. from home) can't inflate the waiting count the driver relies on; they get a `location:outOfRange` socket message explaining why they weren't counted. The driver's own location is never geofenced.
 
 ## Registration & roles
 
@@ -128,3 +129,4 @@ Client connects with `io({ auth: { token } })` (JWT from login/register).
 | `driver:location` | `LocationRecord` | everyone |
 | `waiting:update` | `{ count, riders: LocationRecord[] }` | driver + admin only |
 | `location:error` | `{ error }` | sender, on invalid payload |
+| `location:outOfRange` | `{ message }` | sender, when a rider's `isWaiting: true` was rejected by the route geofence |
