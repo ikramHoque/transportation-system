@@ -1,4 +1,4 @@
-import { MapContainer, Marker, Polyline, Tooltip, TileLayer } from "react-leaflet";
+import { Circle, MapContainer, Marker, Polyline, Tooltip, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import type { LatLng, LocationRecord, RouteStop } from "../types";
 
@@ -14,6 +14,7 @@ function emojiIcon(emoji: string, size: number): L.DivIcon {
 const busIcon = emojiIcon("🚌", 30);
 const riderIcon = emojiIcon("🧍", 22);
 const stopIcon = emojiIcon("📍", 20);
+const selfIcon = emojiIcon("🔵", 18);
 
 interface MapViewProps {
   stops: RouteStop[];
@@ -21,10 +22,22 @@ interface MapViewProps {
   path?: LatLng[];
   drivers?: LocationRecord[];
   riders?: LocationRecord[];
+  /** The viewer's own live position, shown regardless of whether they're within the route geofence. */
+  self?: LatLng;
+  /** Distance from `self` to the nearest point on the route, in meters -- drawn as a circle when set. */
+  selfDistanceToRouteMeters?: number;
   height?: string;
 }
 
-export function MapView({ stops, path, drivers = [], riders = [], height = "60vh" }: MapViewProps) {
+export function MapView({
+  stops,
+  path,
+  drivers = [],
+  riders = [],
+  self,
+  selfDistanceToRouteMeters,
+  height = "60vh",
+}: MapViewProps) {
   const center: [number, number] = stops.length
     ? [stops[Math.floor(stops.length / 2)].lat, stops[Math.floor(stops.length / 2)].lng]
     : [23.78, 90.43];
@@ -71,6 +84,28 @@ export function MapView({ stops, path, drivers = [], riders = [], height = "60vh
             </Tooltip>
           </Marker>
         ))}
+
+        {self && selfDistanceToRouteMeters !== undefined && (
+          <Circle
+            center={[self.lat, self.lng]}
+            radius={selfDistanceToRouteMeters}
+            pathOptions={{ color: "#dc2626", weight: 2, dashArray: "6 6", fillOpacity: 0.05 }}
+          />
+        )}
+
+        {self && (
+          <Marker position={[self.lat, self.lng]} icon={selfIcon}>
+            <Tooltip direction="top" offset={[0, -10]} permanent>
+              You
+              {selfDistanceToRouteMeters !== undefined && (
+                <>
+                  <br />
+                  {Math.round(selfDistanceToRouteMeters)}m from route
+                </>
+              )}
+            </Tooltip>
+          </Marker>
+        )}
       </MapContainer>
     </div>
   );

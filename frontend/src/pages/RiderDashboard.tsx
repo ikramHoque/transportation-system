@@ -17,6 +17,8 @@ export function RiderDashboard() {
   const [isWaiting, setIsWaiting] = useState(false);
   const [outOfRangeMessage, setOutOfRangeMessage] = useState<string | null>(null);
   const [pickedUpMessage, setPickedUpMessage] = useState<string | null>(null);
+  const [distanceToRouteMeters, setDistanceToRouteMeters] = useState<number | null>(null);
+  const [geofenceRadiusMeters, setGeofenceRadiusMeters] = useState<number | null>(null);
 
   const { position, error: geoError } = useGeolocation({ enabled: isWaiting, intervalMs: 20000 });
 
@@ -45,14 +47,20 @@ export function RiderDashboard() {
       // locally so the button doesn't keep claiming "waiting" is still on.
       setIsWaiting(false);
     }
+    function handleSelfStatus(payload: { distanceToRouteMeters: number; geofenceRadiusMeters: number }) {
+      setDistanceToRouteMeters(payload.distanceToRouteMeters);
+      setGeofenceRadiusMeters(payload.geofenceRadiusMeters);
+    }
 
     socket.on("driver:location", handleDriverLocation);
     socket.on("location:outOfRange", handleOutOfRange);
     socket.on("location:pickedUp", handlePickedUp);
+    socket.on("location:selfStatus", handleSelfStatus);
     return () => {
       socket.off("driver:location", handleDriverLocation);
       socket.off("location:outOfRange", handleOutOfRange);
       socket.off("location:pickedUp", handlePickedUp);
+      socket.off("location:selfStatus", handleSelfStatus);
     };
   }, [socket]);
 
@@ -67,8 +75,20 @@ export function RiderDashboard() {
   const handleToggle = useCallback(() => {
     setOutOfRangeMessage(null);
     setPickedUpMessage(null);
-    setIsWaiting((prev) => !prev);
+    // Location sharing (and thus distance-to-route info) only makes sense
+    // while actively waiting; drop it immediately on stopping rather than
+    // leaving a stale reading visible.
+    setIsWaiting((prev) => {
+      if (prev) {
+        setDistanceToRouteMeters(null);
+        setGeofenceRadiusMeters(null);
+      }
+      return !prev;
+    });
   }, []);
+
+  const isOutOfGeofence =
+    distanceToRouteMeters !== null && geofenceRadiusMeters !== null && distanceToRouteMeters > geofenceRadiusMeters;
 
   const latestDriver = drivers[0];
 
@@ -85,7 +105,13 @@ export function RiderDashboard() {
       {isWaiting && !position && !geoError && (
         <div className="alert alert--info">Getting your location...</div>
       )}
-      {isWaiting && outOfRangeMessage && <div className="alert alert--error">{outOfRangeMessage}</div>}
+      {isWaiting && outOfRangeMessage && (
+        <div className="alert alert--error">
+          {outOfRangeMessage}
+          {distanceToRouteMeters !== null &&
+            ` You're about ${Math.round(distanceToRouteMeters)}m from the nearest point on the route -- see the circle on the map.`}
+        </div>
+      )}
       {pickedUpMessage && <div className="alert alert--info">{pickedUpMessage}</div>}
 
       <div className="dashboard__stats">
@@ -99,7 +125,13 @@ export function RiderDashboard() {
         )}
       </div>
 
-      <MapView stops={stops} path={path} drivers={drivers} />
+      <MapView
+        stops={stops}
+        path={path}
+        drivers={drivers}
+        self={isWaiting ? position ?? undefined : undefined}
+        selfDistanceToRouteMeters={isWaiting && isOutOfGeofence ? distanceToRouteMeters ?? undefined : undefined}
+      />
     </div>
   );
 }

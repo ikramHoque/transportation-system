@@ -36,12 +36,8 @@ export interface UpsertLocationResult {
   rejectedOutOfRange: boolean;
   /** True when the rider requested isWaiting=true but was auto-cleared for having boarded a bus. */
   autoPickedUp: boolean;
-}
-
-/** Rider locations further than this from the route polyline are never counted as "waiting". */
-function isWithinRouteGeofence(lat: number, lng: number): boolean {
-  const distance = distanceToPathMeters({ lat, lng }, ROUTE_PATH);
-  return distance <= ROUTE_GEOFENCE_RADIUS_METERS;
+  /** Distance from this update's position to the nearest point on the route, in meters. Riders only. */
+  distanceToRouteMeters?: number;
 }
 
 async function upsertDriverLocation(
@@ -65,7 +61,8 @@ async function upsertRiderLocation(
   input: LocationUpdateInput,
 ): Promise<UpsertLocationResult> {
   const requestedWaiting = Boolean(input.isWaiting);
-  const rejectedOutOfRange = requestedWaiting && !isWithinRouteGeofence(input.lat, input.lng);
+  const distanceToRouteMeters = distanceToPathMeters({ lat: input.lat, lng: input.lng }, ROUTE_PATH);
+  const rejectedOutOfRange = requestedWaiting && distanceToRouteMeters > ROUTE_GEOFENCE_RADIUS_METERS;
   const geofencedWaiting = rejectedOutOfRange ? false : requestedWaiting;
 
   const activeDrivers = await getActiveDrivers();
@@ -116,7 +113,7 @@ async function upsertRiderLocation(
   const row = result.rows[0];
   const autoPickedUp = requestedWaiting && !rejectedOutOfRange && !row.is_waiting;
 
-  return { record: toRecord(row), rejectedOutOfRange, autoPickedUp };
+  return { record: toRecord(row), rejectedOutOfRange, autoPickedUp, distanceToRouteMeters };
 }
 
 export async function upsertLocation(

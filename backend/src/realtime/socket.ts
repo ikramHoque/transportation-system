@@ -1,6 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 import { Server, type Socket } from "socket.io";
 import { env } from "../config/env";
+import { ROUTE_GEOFENCE_RADIUS_METERS } from "../config/route";
 import { verifyToken } from "../utils/jwt";
 import { locationUpdateSchema } from "../modules/location/location.schemas";
 import * as locationService from "../modules/location/location.service";
@@ -110,14 +111,19 @@ export function createSocketServer(httpServer: HttpServer): Server {
       }
 
       try {
-        const { record, rejectedOutOfRange, autoPickedUp } = await locationService.upsertLocation(
-          user,
-          parsed.data,
-        );
+        const { record, rejectedOutOfRange, autoPickedUp, distanceToRouteMeters } =
+          await locationService.upsertLocation(user, parsed.data);
 
         if (user.role === "driver") {
           io.emit("driver:location", record);
         } else {
+          // Sent on every rider update (not just rejections) so the rider's own
+          // map can always show how far they are from the route, even when
+          // they're within range and nothing else needs to happen.
+          socket.emit("location:selfStatus", {
+            distanceToRouteMeters,
+            geofenceRadiusMeters: ROUTE_GEOFENCE_RADIUS_METERS,
+          });
           if (rejectedOutOfRange) {
             socket.emit("location:outOfRange", {
               message: "You're too far from the route to be counted as waiting.",
