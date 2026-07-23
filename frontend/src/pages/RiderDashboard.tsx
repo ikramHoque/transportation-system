@@ -17,7 +17,7 @@ export function RiderDashboard() {
   const [outOfRangeMessage, setOutOfRangeMessage] = useState<string | null>(null);
   const [pickedUpMessage, setPickedUpMessage] = useState<string | null>(null);
 
-  const { position, error: geoError } = useGeolocation({ enabled: isWaiting, intervalMs: 6000 });
+  const { position, error: geoError } = useGeolocation({ enabled: isWaiting, intervalMs: 20000 });
 
   useEffect(() => {
     fetchRouteStops().then(setStops).catch(() => {});

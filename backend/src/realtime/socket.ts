@@ -11,6 +11,16 @@ import type { AuthenticatedUser } from "../types";
 /** Drivers and admins get the waiting-riders roster; everyone gets the bus location. */
 const DISPATCH_ROOM = "dispatch";
 
+/**
+ * The waiting roster is normally re-broadcast only when a rider's
+ * location:update fires. If a rider backgrounds their tab (or the
+ * position simply stops changing) without ever sending a final
+ * isWaiting=false, staleness would otherwise only get pruned whenever
+ * some *other* rider happens to trigger a broadcast. This periodic
+ * re-broadcast bounds that self-healing to a fixed worst case instead.
+ */
+const WAITING_REBROADCAST_INTERVAL_MS = 45_000;
+
 function userRoom(userId: string): string {
   return `user:${userId}`;
 }
@@ -73,6 +83,12 @@ export function createSocketServer(httpServer: HttpServer): Server {
     });
     io.in(room).disconnectSockets(true);
   });
+
+  setInterval(() => {
+    broadcastWaitingRiders(io).catch((err) => {
+      console.error("Failed periodic waiting-roster rebroadcast", err);
+    });
+  }, WAITING_REBROADCAST_INTERVAL_MS);
 
   io.on("connection", (rawSocket) => {
     const socket = rawSocket as AuthenticatedSocket;
