@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { extractErrorMessage } from "../api/client";
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, sessionMessage } = useAuth();
   const navigate = useNavigate();
   const [employeeId, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
@@ -30,6 +30,8 @@ export function LoginPage() {
       <form className="auth-card" onSubmit={handleSubmit}>
         <h1>BJIT Transportation</h1>
         <p className="auth-card__subtitle">Notunbazar &harr; Satarkul shuttle tracker</p>
+
+        {sessionMessage && <div className="alert alert--info">{sessionMessage}</div>}
 
         <label>
           Employee ID

@@ -4,10 +4,16 @@ import { env } from "../config/env";
 import { verifyToken } from "../utils/jwt";
 import { locationUpdateSchema } from "../modules/location/location.schemas";
 import * as locationService from "../modules/location/location.service";
+import { isSessionActive } from "../modules/auth/auth.service";
+import { sessionEvents, SESSION_INVALIDATED_EVENT } from "./sessionEvents";
 import type { AuthenticatedUser } from "../types";
 
 /** Drivers and admins get the waiting-riders roster; everyone gets the bus location. */
 const DISPATCH_ROOM = "dispatch";
+
+function userRoom(userId: string): string {
+  return `user:${userId}`;
+}
 
 interface AuthenticatedSocket extends Socket {
   data: {
@@ -15,7 +21,7 @@ interface AuthenticatedSocket extends Socket {
   };
 }
 
-function authenticateSocket(socket: Socket, next: (err?: Error) => void): void {
+async function authenticateSocket(socket: Socket, next: (err?: Error) => void): Promise<void> {
   const token = socket.handshake.auth?.token as string | undefined;
   if (!token) {
     next(new Error("Missing authentication token"));
@@ -24,6 +30,13 @@ function authenticateSocket(socket: Socket, next: (err?: Error) => void): void {
 
   try {
     const payload = verifyToken(token);
+
+    const active = await isSessionActive(payload.sub, payload.sid);
+    if (!active) {
+      next(new Error("Session ended -- this account signed in on another device"));
+      return;
+    }
+
     (socket as AuthenticatedSocket).data.user = {
       id: payload.sub,
       employeeId: payload.employeeId,
@@ -50,9 +63,22 @@ export function createSocketServer(httpServer: HttpServer): Server {
 
   io.use(authenticateSocket);
 
+  // A newer login elsewhere rotates the DB session id (see auth.service);
+  // this is how the previously-connected socket actually gets cut off in
+  // real time, rather than lingering until it happens to reconnect.
+  sessionEvents.on(SESSION_INVALIDATED_EVENT, (userId: string) => {
+    const room = userRoom(userId);
+    io.to(room).emit("session:invalidated", {
+      message: "You were logged out because this account signed in on another device.",
+    });
+    io.in(room).disconnectSockets(true);
+  });
+
   io.on("connection", (rawSocket) => {
     const socket = rawSocket as AuthenticatedSocket;
     const { user } = socket.data;
+
+    socket.join(userRoom(user.id));
 
     if (user.role === "driver" || user.role === "admin") {
       socket.join(DISPATCH_ROOM);

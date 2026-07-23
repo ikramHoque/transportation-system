@@ -14,6 +14,36 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Endpoints reachable without an active session -- a 401 from these means
+// "wrong credentials", not "your session was invalidated", so they must
+// never trigger the global logout below.
+const PUBLIC_AUTH_PATHS = ["/auth/login", "/auth/register"];
+
+type UnauthorizedHandler = (message: string) => void;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+/** Registered once by AuthContext so a 401 from any authenticated call can force a client-side logout. */
+export function setUnauthorizedHandler(handler: UnauthorizedHandler): void {
+  unauthorizedHandler = handler;
+}
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const url = axios.isAxiosError(error) ? (error.config?.url ?? "") : "";
+    const isPublicAuthCall = PUBLIC_AUTH_PATHS.some((path) => url.includes(path));
+
+    if (axios.isAxiosError(error) && error.response?.status === 401 && !isPublicAuthCall) {
+      const message =
+        typeof error.response.data?.error === "string"
+          ? error.response.data.error
+          : "Your session ended. Please log in again.";
+      unauthorizedHandler?.(message);
+    }
+    return Promise.reject(error);
+  },
+);
+
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_STORAGE_KEY);
 }

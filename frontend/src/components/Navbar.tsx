@@ -10,7 +10,7 @@ export function Navbar() {
       <div className="navbar__user">
         <span className="badge">{user.role}</span>
         <span>{user.employeeId}</span>
-        <button onClick={logout} className="btn btn--ghost btn--small">
+        <button onClick={() => logout()} className="btn btn--ghost btn--small">
           Logout
         </button>
       </div>

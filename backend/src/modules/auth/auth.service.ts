@@ -1,7 +1,9 @@
 import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import { pool } from "../../db/pool";
 import { HttpError } from "../../utils/httpError";
 import { signToken } from "../../utils/jwt";
+import { sessionEvents, SESSION_INVALIDATED_EVENT } from "../../realtime/sessionEvents";
 import type { AuthenticatedUser, UserRole } from "../../types";
 import type { LoginInput, RegisterInput } from "./auth.schemas";
 
@@ -34,16 +36,17 @@ export async function register(input: RegisterInput): Promise<{ token: string; u
 
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
   const role = allowed.rows[0].role;
+  const sessionId = randomUUID();
 
   const inserted = await pool.query<UserRow>(
-    `INSERT INTO users (employee_id, password_hash, role)
-     VALUES ($1, $2, $3)
+    `INSERT INTO users (employee_id, password_hash, role, session_id)
+     VALUES ($1, $2, $3, $4)
      RETURNING id, employee_id, password_hash, role`,
-    [input.employeeId, passwordHash, role],
+    [input.employeeId, passwordHash, role, sessionId],
   );
 
   const user = toAuthenticatedUser(inserted.rows[0]);
-  return { token: signToken(user), user };
+  return { token: signToken(user, sessionId), user };
 }
 
 export async function login(input: LoginInput): Promise<{ token: string; user: AuthenticatedUser }> {
@@ -61,6 +64,20 @@ export async function login(input: LoginInput): Promise<{ token: string; user: A
     throw new HttpError(401, "Invalid employee ID or password");
   }
 
+  // Rotating the session id invalidates any token issued by a previous
+  // login (REST requests re-check it in requireAuth; already-connected
+  // sockets are actively kicked via this event).
+  const sessionId = randomUUID();
+  await pool.query("UPDATE users SET session_id = $1 WHERE id = $2", [sessionId, row.id]);
+  sessionEvents.emit(SESSION_INVALIDATED_EVENT, row.id);
+
   const user = toAuthenticatedUser(row);
-  return { token: signToken(user), user };
+  return { token: signToken(user, sessionId), user };
+}
+
+export async function isSessionActive(userId: string, sessionId: string): Promise<boolean> {
+  const result = await pool.query<{ session_id: string }>("SELECT session_id FROM users WHERE id = $1", [
+    userId,
+  ]);
+  return result.rowCount === 1 && result.rows[0].session_id === sessionId;
 }
