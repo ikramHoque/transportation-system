@@ -101,7 +101,13 @@ export function RiderDashboard() {
         title={`Hi, ${user?.employeeId}`}
         subtitle="Notunbazar ↔ Satarkul shuttle -- tap in when you're at the stop"
         actions={
-          <button className={`btn ${isWaiting ? "btn--danger" : "btn--primary"}`} onClick={handleToggle}>
+          <button
+            className={`btn btn--waiting-toggle ${isWaiting ? "btn--danger" : "btn--primary"}`}
+            onClick={handleToggle}
+          >
+            <span className={`btn-icon ${isWaiting ? "btn-icon--pulse" : "btn-icon--bounce"}`} aria-hidden="true">
+              {isWaiting ? "📡" : "🧍"}
+            </span>
             {isWaiting ? "Stop waiting" : "I'm waiting for the bus"}
           </button>
         }

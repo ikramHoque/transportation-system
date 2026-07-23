@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Navbar } from "./components/Navbar";
+import { RouteStrip } from "./components/RouteStrip";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RiderDashboard } from "./pages/RiderDashboard";
@@ -24,6 +25,7 @@ function AppLayout() {
   return (
     <>
       {user && <Navbar />}
+      {user && <RouteStrip />}
       <main className="app-content">
         <Outlet />
       </main>
