@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Navbar } from "./components/Navbar";
@@ -18,33 +18,42 @@ function RoleHome() {
   return <Navigate to="/rider" replace />;
 }
 
-export default function App() {
+/** Wraps the authenticated app (Navbar + padded content); login/register render outside this so their full-bleed scene isn't constrained by app-content's padding. */
+function AppLayout() {
   const { user } = useAuth();
-
   return (
     <>
       {user && <Navbar />}
       <main className="app-content">
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/" element={<RoleHome />} />
-
-          <Route element={<ProtectedRoute allowedRoles={["engineer", "staff"]} />}>
-            <Route path="/rider" element={<RiderDashboard />} />
-          </Route>
-
-          <Route element={<ProtectedRoute allowedRoles={["driver"]} />}>
-            <Route path="/driver" element={<DriverDashboard />} />
-          </Route>
-
-          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-            <Route path="/admin" element={<AdminDashboard />} />
-          </Route>
-
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+        <Outlet />
       </main>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<RoleHome />} />
+
+        <Route element={<ProtectedRoute allowedRoles={["engineer", "staff"]} />}>
+          <Route path="/rider" element={<RiderDashboard />} />
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={["driver"]} />}>
+          <Route path="/driver" element={<DriverDashboard />} />
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
+
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   );
 }

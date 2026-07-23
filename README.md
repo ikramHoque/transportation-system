@@ -25,13 +25,13 @@ For a step-by-step walkthrough of exactly how location tracking works — the ge
 Browser (React SPA)
    │  HTTPS/WS (relative /api, /socket.io)
    ▼
-nginx (frontend container, port 8080)
+nginx (frontend container -- only :8080 exposed in dev, :80/:443 in production)
    │  proxy_pass
    ▼
-Express API + Socket.IO (backend container, port 4000)
+Express API + Socket.IO (backend container, :4000 -- never exposed to the host)
    │
    ▼
-PostgreSQL (db container)
+PostgreSQL (db container -- never exposed to the host)
 ```
 
 Real-time design:
@@ -100,6 +100,40 @@ cd frontend
 npm install
 npm run dev              # Vite dev server, port 5173, proxies /api and /socket.io to :4000
 ```
+
+## Production deployment on a VM (only 22 + 443 open)
+
+For a VM whose firewall/security group only allows SSH (22) and HTTPS (443) inbound — port 80 also needs to be reachable, but only ever serves the Let's Encrypt ACME challenge and a redirect to HTTPS, never app traffic (`frontend/nginx.prod.conf.template`). `backend` and `db` are never port-mapped to the host in any configuration — only `frontend`/nginx is ever reachable from outside the Docker network, dev or prod.
+
+**Prerequisites**: a domain name with DNS already pointed at the VM's public IP (Let's Encrypt cannot issue a certificate for a bare IP), and Docker + Docker Compose installed.
+
+```bash
+git clone <this repo> && cd BJIT-Transportation-System
+cp .env.example .env
+# edit .env: set DOMAIN, LETSENCRYPT_EMAIL, a real JWT_SECRET (openssl rand -hex 32),
+# and CORS_ORIGIN=https://<DOMAIN>
+
+# 1. Bring up everything except frontend first -- nginx needs a certificate
+#    to exist before it will start at all.
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d db backend
+
+# 2. One-time bootstrap: gets the first real certificate from Let's Encrypt
+#    (see the script for exactly what this does and why).
+./scripts/init-letsencrypt.sh
+
+# 3. Bring up the rest (frontend + the certbot auto-renewal service).
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+Your app is now served at `https://<DOMAIN>`.
+
+**Renewal**: the `certbot` service renews the certificate automatically in the background, but nginx needs a reload to actually pick up a renewed certificate — it doesn't happen on its own. Add a host crontab entry:
+
+```
+0 3 * * * cd /path/to/BJIT-Transportation-System && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec frontend nginx -s reload
+```
+
+**Why two Compose files, not one**: `docker-compose.yml` has no port mapping for `frontend` at all. Plain `docker compose up` (no `-f` flags) auto-loads `docker-compose.override.yml` alongside it, which adds the `${APP_PORT:-8080}:80` mapping used for local dev/testing. `docker-compose.prod.yml`, applied explicitly via `-f`, adds `80:80` + `443:443` plus the `certbot` service instead. Explicitly passing `-f` flags is what keeps `docker-compose.override.yml` from being auto-included — mixing it in would leave port 8080 *also* bound in production, since Compose merges list fields like `ports` across files rather than replacing them.
 
 ## Configuring the real route
 

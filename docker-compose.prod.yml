@@ -1,0 +1,39 @@
+# Production overlay for a VM with only 22 (SSH) and 443 (HTTPS) meant to
+# be open to the world -- port 80 is also bound, but only ever serves the
+# Let's Encrypt ACME challenge and a redirect to HTTPS (see
+# frontend/nginx.prod.conf.template), and needs to be reachable from the
+# internet for certificate issuance/renewal. backend and db stay entirely
+# unexposed, exactly as in the base docker-compose.yml.
+#
+# Usage:
+#   cp .env.example .env   # then set DOMAIN, LETSENCRYPT_EMAIL, JWT_SECRET, etc.
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d db backend
+#   ./scripts/init-letsencrypt.sh          # one-time: obtains the first certificate
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# See README.md's "Production deployment on a VM" section for the full walkthrough.
+
+services:
+  frontend:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./frontend/nginx.prod.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - certbot_etc:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env to the domain name pointed at this VM}
+
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    volumes:
+      - certbot_etc:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: >-
+      /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done;"
+
+volumes:
+  certbot_etc:
+  certbot_www:

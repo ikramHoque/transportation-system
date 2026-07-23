@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { extractErrorMessage } from "../api/client";
+import { AuthLayout } from "../components/AuthLayout";
 
 export function RegisterPage() {
   const { register } = useAuth();
@@ -33,7 +34,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="auth-page">
+    <AuthLayout>
       <form className="auth-card" onSubmit={handleSubmit}>
         <h1>Create account</h1>
         <p className="auth-card__subtitle">Registration requires a valid company employee ID</p>
@@ -81,6 +82,6 @@ export function RegisterPage() {
           Already have an account? <Link to="/login">Login</Link>
         </p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

@@ -6,7 +6,10 @@ export function Navbar() {
 
   return (
     <header className="navbar">
-      <div className="navbar__brand">BJIT Transportation</div>
+      <div className="navbar__brand">
+        <img src="/bjit-logo.svg" alt="BJIT" className="navbar__logo" />
+        BJIT Transportation
+      </div>
       <div className="navbar__user">
         <span className="badge">{user.role}</span>
         <span>{user.employeeId}</span>

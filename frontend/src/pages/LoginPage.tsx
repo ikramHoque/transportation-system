@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { extractErrorMessage } from "../api/client";
+import { AuthLayout } from "../components/AuthLayout";
 
 export function LoginPage() {
   const { login, sessionMessage } = useAuth();
@@ -26,7 +27,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="auth-page">
+    <AuthLayout>
       <form className="auth-card" onSubmit={handleSubmit}>
         <h1>BJIT Transportation</h1>
         <p className="auth-card__subtitle">Notunbazar &harr; Satarkul shuttle tracker</p>
@@ -59,6 +60,6 @@ export function LoginPage() {
           Don&apos;t have an account? <Link to="/register">Register</Link>
         </p>
       </form>
-    </div>
+    </AuthLayout>
   );
 }
