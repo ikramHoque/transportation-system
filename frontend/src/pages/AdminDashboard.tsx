@@ -136,39 +136,45 @@ export function AdminDashboard() {
 
         {formError && <div className="alert alert--error">{formError}</div>}
 
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Employee ID</th>
-              <th>Role</th>
-              <th>Registered</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map((employee) => (
-              <tr key={employee.employee_id}>
-                <td>{employee.employee_id}</td>
-                <td>
-                  <span className={`badge badge--${employee.role}`}>{employee.role}</span>
-                </td>
-                <td>
-                  {employee.is_registered ? <span className="tag--success">Yes</span> : <span className="muted">No</span>}
-                </td>
-                <td>
-                  {!employee.is_registered && (
-                    <button
-                      className="btn btn--ghost btn--small"
-                      onClick={() => handleRemove(employee.employee_id)}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </td>
+        <div className="table-scroll">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Employee ID</th>
+                <th>Role</th>
+                <th>Registered</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {employees.map((employee) => (
+                <tr key={employee.employee_id}>
+                  <td>{employee.employee_id}</td>
+                  <td>
+                    <span className={`badge badge--${employee.role}`}>{employee.role}</span>
+                  </td>
+                  <td>
+                    {employee.is_registered ? (
+                      <span className="tag--success">Yes</span>
+                    ) : (
+                      <span className="muted">No</span>
+                    )}
+                  </td>
+                  <td>
+                    {!employee.is_registered && (
+                      <button
+                        className="btn btn--ghost btn--small"
+                        onClick={() => handleRemove(employee.employee_id)}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

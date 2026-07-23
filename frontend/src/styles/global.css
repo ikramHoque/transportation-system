@@ -39,6 +39,12 @@ body {
   padding: 1rem;
 }
 
+@media (max-width: 480px) {
+  .app-content {
+    padding: 0.75rem;
+  }
+}
+
 .centered {
   display: flex;
   flex-direction: column;
@@ -55,6 +61,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 0.4rem;
   padding: 0.75rem 1.5rem;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
@@ -78,17 +86,38 @@ body {
   align-items: center;
   gap: 0.6rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .navbar__logo {
   height: 28px;
   width: auto;
+  flex-shrink: 0;
 }
 
 .navbar__user {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0.6rem 0.9rem;
+    gap: 0.5rem;
+  }
+  .navbar__brand {
+    font-size: 0.95rem;
+    gap: 0.4rem;
+  }
+  .navbar__logo {
+    height: 22px;
+  }
+  .navbar__user {
+    font-size: 0.82rem;
+    gap: 0.5rem;
+  }
 }
 
 .badge {
@@ -99,6 +128,14 @@ body {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.45rem;
+  }
 }
 .badge--engineer,
 .badge--staff {
@@ -467,6 +504,17 @@ body {
   align-items: center;
 }
 
+@media (max-width: 480px) {
+  /* A wrapped action button (e.g. the rider's "I'm waiting" toggle) becomes
+     a full-width tap target instead of an oddly-sized inline button. */
+  .page-header__actions {
+    width: 100%;
+  }
+  .page-header__actions .btn {
+    width: 100%;
+  }
+}
+
 .stat-card {
   display: flex;
   align-items: center;
@@ -627,6 +675,24 @@ body {
   margin-bottom: 1rem;
 }
 
+@media (max-width: 480px) {
+  .inline-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .inline-form input,
+  .inline-form select,
+  .inline-form button {
+    width: 100%;
+  }
+}
+
+/* Lets a wide table scroll within its own box instead of blowing out the
+   page width if content (e.g. a long employee ID) doesn't fit. */
+.table-scroll {
+  overflow-x: auto;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -638,4 +704,15 @@ body {
   text-align: left;
   padding: 0.5rem 0.6rem;
   border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .table {
+    font-size: 0.82rem;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.45rem;
+  }
 }
