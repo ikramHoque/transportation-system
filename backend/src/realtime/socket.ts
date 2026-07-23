@@ -68,7 +68,10 @@ export function createSocketServer(httpServer: HttpServer): Server {
       }
 
       try {
-        const { record, rejectedOutOfRange } = await locationService.upsertLocation(user, parsed.data);
+        const { record, rejectedOutOfRange, autoPickedUp } = await locationService.upsertLocation(
+          user,
+          parsed.data,
+        );
 
         if (user.role === "driver") {
           io.emit("driver:location", record);
@@ -76,6 +79,11 @@ export function createSocketServer(httpServer: HttpServer): Server {
           if (rejectedOutOfRange) {
             socket.emit("location:outOfRange", {
               message: "You're too far from the route to be counted as waiting.",
+            });
+          }
+          if (autoPickedUp) {
+            socket.emit("location:pickedUp", {
+              message: "Looks like you're on the bus -- you're no longer marked as waiting.",
             });
           }
           await broadcastWaitingRiders(io);

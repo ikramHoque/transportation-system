@@ -15,6 +15,7 @@ export function RiderDashboard() {
   const [drivers, setDrivers] = useState<LocationRecord[]>([]);
   const [isWaiting, setIsWaiting] = useState(false);
   const [outOfRangeMessage, setOutOfRangeMessage] = useState<string | null>(null);
+  const [pickedUpMessage, setPickedUpMessage] = useState<string | null>(null);
 
   const { position, error: geoError } = useGeolocation({ enabled: isWaiting, intervalMs: 6000 });
 
@@ -32,12 +33,20 @@ export function RiderDashboard() {
     function handleOutOfRange(payload: { message: string }) {
       setOutOfRangeMessage(payload.message);
     }
+    function handlePickedUp(payload: { message: string }) {
+      setPickedUpMessage(payload.message);
+      // The server already stopped counting us as waiting; reflect that
+      // locally so the button doesn't keep claiming "waiting" is still on.
+      setIsWaiting(false);
+    }
 
     socket.on("driver:location", handleDriverLocation);
     socket.on("location:outOfRange", handleOutOfRange);
+    socket.on("location:pickedUp", handlePickedUp);
     return () => {
       socket.off("driver:location", handleDriverLocation);
       socket.off("location:outOfRange", handleOutOfRange);
+      socket.off("location:pickedUp", handlePickedUp);
     };
   }, [socket]);
 
@@ -51,6 +60,7 @@ export function RiderDashboard() {
 
   const handleToggle = useCallback(() => {
     setOutOfRangeMessage(null);
+    setPickedUpMessage(null);
     setIsWaiting((prev) => !prev);
   }, []);
 
@@ -70,6 +80,7 @@ export function RiderDashboard() {
         <div className="alert alert--info">Getting your location...</div>
       )}
       {isWaiting && outOfRangeMessage && <div className="alert alert--error">{outOfRangeMessage}</div>}
+      {pickedUpMessage && <div className="alert alert--info">{pickedUpMessage}</div>}
 
       <div className="dashboard__stats">
         <StatCard

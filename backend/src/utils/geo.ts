@@ -55,3 +55,8 @@ export function distanceToPathMeters(point: LatLng, path: LatLng[]): number {
   }
   return min;
 }
+
+/** Straight-line distance in meters between two points. */
+export function distanceBetweenPointsMeters(a: LatLng, b: LatLng): number {
+  return distanceToPathMeters(a, [b]);
+}
