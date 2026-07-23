@@ -14,7 +14,7 @@
 #   - Port 80 reachable from the internet (needed for issuance and renewal)
 #
 # Usage (from the repo root):
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d db backend
+#   docker compose -f docker-compose.prod.yml up -d db backend
 #   ./scripts/init-letsencrypt.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -31,7 +31,7 @@ if [ -z "${DOMAIN:-}" ] || [ -z "${LETSENCRYPT_EMAIL:-}" ]; then
   exit 1
 fi
 
-COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml)
+COMPOSE=(docker compose -f docker-compose.prod.yml)
 CERT_PATH="/etc/letsencrypt/live/$DOMAIN"
 
 if "${COMPOSE[@]}" run --rm --entrypoint "/bin/sh -c" certbot \
@@ -69,4 +69,4 @@ echo "### Reloading nginx with the real certificate ..."
 echo "Done -- https://$DOMAIN is now serving a real Let's Encrypt certificate."
 echo "The certbot service will keep renewing it automatically; nginx needs a"
 echo "reload after each renewal to pick up the new cert (e.g. a host cron"
-echo "entry running: docker compose exec frontend nginx -s reload)."
+echo "entry running: docker compose -f docker-compose.prod.yml exec frontend nginx -s reload)."

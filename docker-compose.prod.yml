@@ -1,21 +1,61 @@
-# Production overlay: adds HTTPS (443) once a real domain (or an sslip.io
-# stand-in) exists. Port 80 -- already exposed by the base docker-compose.yml
-# -- keeps working underneath this: nginx.prod.conf.template repurposes it
-# to serve only the Let's Encrypt ACME challenge and a redirect to HTTPS,
-# so it stays reachable for certificate issuance/renewal. backend and db
-# stay entirely unexposed, exactly as in the base docker-compose.yml.
+# Fully independent production deployment: HTTPS on 443, using a real
+# domain (or an sslip.io stand-in -- see README) with a Let's Encrypt
+# certificate. This file does NOT depend on docker-compose.yml and is never
+# combined with it via -f -- run it entirely on its own. It intentionally
+# duplicates the db/backend definitions from docker-compose.yml rather than
+# overlaying it, so there's no cross-file merge behavior to reason about
+# (Compose merges list fields like `ports` across -f files rather than
+# replacing them, which caused real bugs here before this file was made
+# standalone). If you change db/backend config, check both files.
 #
 # Usage:
 #   cp .env.example .env   # then set DOMAIN, LETSENCRYPT_EMAIL, JWT_SECRET, etc.
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d db backend
+#   docker compose -f docker-compose.prod.yml up -d db backend
 #   ./scripts/init-letsencrypt.sh          # one-time: obtains the first certificate
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml up -d
 #
 # See README.md's "Production deployment" section for the full walkthrough.
 
+# Distinct project name from docker-compose.yml so containers/volumes never
+# collide if both are ever run on the same machine (e.g. validating this
+# file locally without tearing down a dev stack first).
+name: bjit-transportation-system-prod
+
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bts}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bts_password}
+      POSTGRES_DB: ${POSTGRES_DB:-bts}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bts} -d ${POSTGRES_DB:-bts}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DATABASE_URL: postgres://${POSTGRES_USER:-bts}:${POSTGRES_PASSWORD:-bts_password}@db:5432/${POSTGRES_DB:-bts}
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://localhost}
+    depends_on:
+      db:
+        condition: service_healthy
+
   frontend:
+    build: ./frontend
+    restart: unless-stopped
     ports:
+      - "80:80"
       - "443:443"
     volumes:
       - ./frontend/nginx.prod.conf.template:/etc/nginx/templates/default.conf.template:ro
@@ -23,6 +63,8 @@ services:
       - certbot_www:/var/www/certbot:ro
     environment:
       DOMAIN: ${DOMAIN:?Set DOMAIN in .env to the domain name pointed at this VM}
+    depends_on:
+      - backend
 
   certbot:
     image: certbot/certbot:latest
@@ -34,5 +76,6 @@ services:
       /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done;"
 
 volumes:
+  db_data:
   certbot_etc:
   certbot_www:

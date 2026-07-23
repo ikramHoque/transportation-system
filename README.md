@@ -103,21 +103,19 @@ npm install
 npm run dev              # Vite dev server, port 5173, proxies /api and /socket.io to :4000
 ```
 
-## Three ways this gets run, same two files
+## Three ways this gets run, two independent files
 
-There are only ever **two** Compose files. Which one(s) you use maps directly to where you're running:
+There are two Compose files, and they're **fully independent** — neither depends on the other, neither is combined with `-f -f`, and each works standalone:
 
 | Where | Command | URL |
 |---|---|---|
 | Your local PC | `docker compose up -d --build` | `http://localhost/...` (or `http://<your-pc's-LAN-IP>/...` from another device) |
-| A VM, no domain yet | *the exact same command* | `http://<vm-public-ip>/...` |
-| A VM with a domain (or sslip.io) | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` | `https://<domain>/...` |
+| A VM, no domain yet | *the exact same command, same file* | `http://<vm-public-ip>/...` |
+| A VM with a domain (or sslip.io) | `docker compose -f docker-compose.prod.yml up -d` | `https://<domain>/...` |
 
-The first two rows are **the same config** — `docker-compose.yml` always exposes plain HTTP on port 80 (`db` and `backend` are never port-mapped to the host in any of these, only `frontend`/nginx is ever reachable). "Local PC" vs. "VM without a domain" isn't a Docker distinction at all; it's just which network address happens to reach that machine — your own LAN IP for a laptop, the VM's public IP for a VM. Nothing in the compose file needs to know or care which one you're using.
+The first two rows use `docker-compose.yml` and are **the same config** — it always exposes plain HTTP on port 80 (`db` and `backend` are never port-mapped to the host in either file, only `frontend`/nginx is ever reachable). "Local PC" vs. "VM without a domain" isn't a Docker distinction at all; it's just which network address happens to reach that machine — your own LAN IP for a laptop, the VM's public IP for a VM. Nothing in the compose file needs to know or care which one you're using.
 
-The third row layers `docker-compose.prod.yml` on top, which only *adds* things: port 443 with TLS termination, and a `certbot` service for the certificate. Port 80 keeps working underneath it too — `frontend/nginx.prod.conf.template` just repurposes it to serve the Let's Encrypt ACME challenge and redirect everything else to HTTPS, instead of serving the app directly.
-
-**Don't run `docker compose -f docker-compose.prod.yml up` by itself** — that file is an overlay, not a standalone project (it has no `build:`/`image:` for `frontend` and doesn't define `backend`/`db` at all). It only works layered on the base file with both `-f` flags, as shown above.
+The third row uses `docker-compose.prod.yml` instead — a complete, self-contained deployment (its own `db`/`backend`/`frontend` definitions, its own project name so it never collides with the dev stack even on the same machine) that adds port 443 with TLS termination and a `certbot` service for the certificate. Port 80 still works, repurposed by `frontend/nginx.prod.conf.template` to serve only the Let's Encrypt ACME challenge and a redirect to HTTPS, instead of the app directly. The two files intentionally duplicate the `db`/`backend` definitions rather than one building on the other — that's the point: no merge behavior to reason about, each file is a complete answer to "what does this environment run." If you change something about `db` or `backend`, check both files.
 
 ### Going from HTTP to HTTPS
 
@@ -139,14 +137,14 @@ cp .env.example .env
 
 # 1. Bring up everything except frontend first -- nginx needs a certificate
 #    to exist before it will start at all.
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d db backend
+docker compose -f docker-compose.prod.yml up -d db backend
 
 # 2. One-time bootstrap: gets the first real certificate from Let's Encrypt
 #    (see the script for exactly what this does and why).
 ./scripts/init-letsencrypt.sh
 
 # 3. Bring up the rest (frontend + the certbot auto-renewal service).
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 Your app is now served at `https://<DOMAIN>`.
@@ -154,7 +152,7 @@ Your app is now served at `https://<DOMAIN>`.
 **Renewal**: the `certbot` service renews the certificate automatically in the background, but nginx needs a reload to actually pick up a renewed certificate — it doesn't happen on its own. Add a host crontab entry:
 
 ```
-0 3 * * * cd /path/to/BJIT-Transportation-System && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec frontend nginx -s reload
+0 3 * * * cd /path/to/BJIT-Transportation-System && docker compose -f docker-compose.prod.yml exec frontend nginx -s reload
 ```
 
 ## Configuring the real route
