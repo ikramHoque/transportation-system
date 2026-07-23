@@ -1,8 +1,8 @@
 /**
  * Single source of truth for the fixed shuttle route so backend and frontend
  * never disagree on stop order/coordinates. Notunbazar -> Satarkul, sourced
- * from a real Google Maps directions route (9 named stops with precise
- * coordinates) rather than approximated.
+ * from two real Google Maps directions routes (12 named stops with precise
+ * coordinates, merged and deduplicated) rather than approximated.
  */
 export interface RouteStop {
   id: string;
@@ -27,10 +27,13 @@ export const ROUTE_STOPS: RouteStop[] = [
     lat: 23.7989254,
     lng: 90.4385411,
   },
+  { id: "nazira-bazar", name: "Nazira Bazar Reloaded", lat: 23.7995866, lng: 90.4425091 },
+  { id: "faster-logistics", name: "Faster Logistics Ltd", lat: 23.7999755, lng: 90.4471874 },
   { id: "bashundhara-gate", name: "Bashundhara Gate, University Gate", lat: 23.8002639, lng: 90.4486682 },
   { id: "gokart-courtside", name: "GoKart Courtside", lat: 23.8005041, lng: 90.4518795 },
   { id: "feroza-garden", name: "Feroza Garden", lat: 23.8016825, lng: 90.4609117 },
-  { id: "satarkul", name: "BJIT, Satarkul", lat: 23.8003911, lng: 90.4626517 },
+  { id: "panchkhola-morr", name: "Panchkhola Morr (Madrasatun Noor)", lat: 23.8010741, lng: 90.4625373 },
+  { id: "satarkul", name: "BJIT Limited, Head Office (Satarkul)", lat: 23.8002352, lng: 90.4627885 },
 ];
 
 /**
@@ -48,9 +51,9 @@ export const ROUTE_GEOFENCE_RADIUS_METERS = 500;
  * routing API (router.project-osrm.org, no key required) between just the
  * two endpoints (Notun Bazar -> BJIT, Satarkul), then hand-copied here; it
  * is NOT fetched at runtime. Deliberately routed endpoint-to-endpoint
- * rather than through all 9 stops as mandatory waypoints -- OSRM forces an
- * explicit stop-and-loop maneuver at each waypoint, and several of these
- * stops sit close together on the same road, which produced ugly
+ * rather than through all 12 stops as mandatory waypoints -- OSRM forces
+ * an explicit stop-and-loop maneuver at each waypoint, and several of
+ * these stops sit close together on the same road, which produced ugly
  * backtracking loops in the geometry. Verified instead that every named
  * stop in ROUTE_STOPS falls within ~30m of this path, confirming it
  * naturally passes by all of them anyway.
@@ -77,5 +80,5 @@ export const ROUTE_PATH: LatLng[] = [
   { lat: 23.801646, lng: 90.461089 }, { lat: 23.801429, lng: 90.461212 }, { lat: 23.801239, lng: 90.461377 },
   { lat: 23.801177, lng: 90.461661 }, { lat: 23.801158, lng: 90.46185 }, { lat: 23.801124, lng: 90.462023 },
   { lat: 23.800977, lng: 90.462489 }, { lat: 23.800849, lng: 90.462627 }, { lat: 23.80072, lng: 90.462672 },
-  { lat: 23.800535, lng: 90.462668 }, { lat: 23.800392, lng: 90.462666 },
+  { lat: 23.800535, lng: 90.462668 }, { lat: 23.800239, lng: 90.462679 }, { lat: 23.800214, lng: 90.462685 },
 ];
