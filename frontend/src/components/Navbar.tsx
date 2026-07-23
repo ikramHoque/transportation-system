@@ -11,7 +11,7 @@ export function Navbar() {
         BJIT Transportation
       </div>
       <div className="navbar__user">
-        <span className="badge">{user.role}</span>
+        <span className={`badge badge--${user.role}`}>{user.role}</span>
         <span>{user.employeeId}</span>
         <button onClick={() => logout()} className="btn btn--ghost btn--small">
           Logout

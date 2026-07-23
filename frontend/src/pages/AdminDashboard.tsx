@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { DashboardHeader } from "../components/DashboardHeader";
 import { MapView } from "../components/MapView";
 import { StatCard } from "../components/StatCard";
 import { useSocket } from "../context/SocketContext";
@@ -87,13 +88,27 @@ export function AdminDashboard() {
 
   return (
     <div className="dashboard">
-      <div className="dashboard__header">
-        <h2>Admin overview</h2>
-      </div>
+      <DashboardHeader
+        icon="🛰️"
+        tone="admin"
+        title="Admin overview"
+        subtitle="Live shuttle control center"
+      />
 
       <div className="dashboard__stats">
-        <StatCard label="Active buses" value={drivers.length} tone={drivers.length > 0 ? "success" : "warning"} />
-        <StatCard label="Engineers waiting" value={riders.length} tone={riders.length > 0 ? "success" : "default"} />
+        <StatCard
+          icon="🚌"
+          label="Active buses"
+          value={drivers.length}
+          tone={drivers.length > 0 ? "success" : "warning"}
+          live={drivers.length > 0}
+        />
+        <StatCard
+          icon="🧍"
+          label="Engineers waiting"
+          value={riders.length}
+          tone={riders.length > 0 ? "success" : "default"}
+        />
       </div>
 
       <MapView stops={stops} path={path} drivers={drivers} riders={riders} />
@@ -134,8 +149,12 @@ export function AdminDashboard() {
             {employees.map((employee) => (
               <tr key={employee.employee_id}>
                 <td>{employee.employee_id}</td>
-                <td>{employee.role}</td>
-                <td>{employee.is_registered ? "Yes" : "No"}</td>
+                <td>
+                  <span className={`badge badge--${employee.role}`}>{employee.role}</span>
+                </td>
+                <td>
+                  {employee.is_registered ? <span className="tag--success">Yes</span> : <span className="muted">No</span>}
+                </td>
                 <td>
                   {!employee.is_registered && (
                     <button

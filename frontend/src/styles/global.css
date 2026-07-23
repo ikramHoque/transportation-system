@@ -9,6 +9,16 @@
   --color-success: #16a34a;
   --color-warning: #d97706;
   --color-danger: #dc2626;
+
+  /* Role accents, echoed in badges, stat icons, and page headers so each
+     dashboard reads as "who you are" at a glance. */
+  --color-role-rider: #2563eb;
+  --color-role-rider-tint: #e2ebfd;
+  --color-role-driver: #b45309;
+  --color-role-driver-tint: #fdf0da;
+  --color-role-admin: #7c3aed;
+  --color-role-admin-tint: #ede4fc;
+
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -18,7 +28,8 @@
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eaf3ff 0%, var(--color-bg) 320px);
   color: var(--color-text);
 }
 
@@ -40,12 +51,26 @@ body {
 
 /* Navbar */
 .navbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.5rem;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
+}
+
+/* A thin dashed "road line" under the navbar -- the same road-marking motif
+   as the login page's animated scene, so the branded look carries through
+   into the app instead of stopping at the login form. */
+.navbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 3px;
+  background-image: repeating-linear-gradient(90deg, #ffd166 0 18px, transparent 18px 32px);
 }
 
 .navbar__brand {
@@ -74,6 +99,16 @@ body {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+.badge--engineer,
+.badge--staff {
+  background: var(--color-role-rider);
+}
+.badge--driver {
+  background: var(--color-role-driver);
+}
+.badge--admin {
+  background: var(--color-role-admin);
 }
 
 /* Buttons */
@@ -374,33 +409,91 @@ body {
   padding: 1rem 0;
 }
 
-.dashboard__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.dashboard__header h2 {
-  margin: 0;
-}
-
 .dashboard__stats {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
 }
 
+/* Page header: an icon+title banner, color-coded per role, used at the top
+   of each role's dashboard so /rider, /driver, /admin each read as a
+   distinct "who you are" context rather than the same generic panel. */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 1.1rem 1.4rem;
+  flex-wrap: wrap;
+}
+
+.page-header__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+.page-header--rider .page-header__icon {
+  background: var(--color-role-rider-tint);
+}
+.page-header--driver .page-header__icon {
+  background: var(--color-role-driver-tint);
+}
+.page-header--admin .page-header__icon {
+  background: var(--color-role-admin-tint);
+}
+
+.page-header__text {
+  flex: 1;
+  min-width: 200px;
+}
+.page-header__text h2 {
+  margin: 0 0 0.15rem;
+}
+.page-header__text p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+}
+
 .stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 0.9rem 1.2rem;
-  min-width: 160px;
+  min-width: 180px;
+}
+
+.stat-card__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
 .stat-card__value {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 1.6rem;
   font-weight: 700;
 }
@@ -414,6 +507,31 @@ body {
 .stat-card__label {
   color: var(--color-muted);
   font-size: 0.85rem;
+}
+
+/* Small pulsing dot for real-time statuses (bus on the road, actively sharing). */
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  animation: live-pulse 1.6s ease-out infinite;
+}
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(22, 163, 74, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
 }
 
 /* Map */
@@ -446,13 +564,60 @@ body {
   margin-top: 0;
 }
 
-.rider-list ul {
+.waiting-list {
+  list-style: none;
   margin: 0;
-  padding-left: 1.2rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.waiting-card {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+}
+
+.waiting-card__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-role-rider-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.waiting-card__body {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.waiting-card__id {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.waiting-card__time {
+  font-size: 0.78rem;
+  color: var(--color-muted);
 }
 
 .muted {
   color: var(--color-muted);
+}
+
+.tag--success {
+  color: var(--color-success);
+  font-weight: 600;
 }
 
 .inline-form {

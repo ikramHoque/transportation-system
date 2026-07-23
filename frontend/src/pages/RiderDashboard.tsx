@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { DashboardHeader } from "../components/DashboardHeader";
 import { MapView } from "../components/MapView";
 import { StatCard } from "../components/StatCard";
 import { useAuth } from "../context/AuthContext";
@@ -94,12 +95,17 @@ export function RiderDashboard() {
 
   return (
     <div className="dashboard">
-      <div className="dashboard__header">
-        <h2>Hi, {user?.employeeId}</h2>
-        <button className={`btn ${isWaiting ? "btn--danger" : "btn--primary"}`} onClick={handleToggle}>
-          {isWaiting ? "Stop waiting" : "I'm waiting for the bus"}
-        </button>
-      </div>
+      <DashboardHeader
+        icon="🧍"
+        tone="rider"
+        title={`Hi, ${user?.employeeId}`}
+        subtitle="Notunbazar ↔ Satarkul shuttle -- tap in when you're at the stop"
+        actions={
+          <button className={`btn ${isWaiting ? "btn--danger" : "btn--primary"}`} onClick={handleToggle}>
+            {isWaiting ? "Stop waiting" : "I'm waiting for the bus"}
+          </button>
+        }
+      />
 
       {geoError && <div className="alert alert--error">Location error: {geoError}</div>}
       {isWaiting && !position && !geoError && (
@@ -116,12 +122,18 @@ export function RiderDashboard() {
 
       <div className="dashboard__stats">
         <StatCard
+          icon="🚌"
           label="Bus status"
           value={latestDriver ? "On the road" : "No live location yet"}
           tone={latestDriver ? "success" : "warning"}
+          live={Boolean(latestDriver)}
         />
         {latestDriver && (
-          <StatCard label="Last updated" value={new Date(latestDriver.updatedAt).toLocaleTimeString()} />
+          <StatCard
+            icon="🕒"
+            label="Last updated"
+            value={new Date(latestDriver.updatedAt).toLocaleTimeString()}
+          />
         )}
       </div>
 

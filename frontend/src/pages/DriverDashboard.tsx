@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DashboardHeader } from "../components/DashboardHeader";
 import { MapView } from "../components/MapView";
 import { StatCard } from "../components/StatCard";
 import { useAuth } from "../context/AuthContext";
@@ -64,20 +65,29 @@ export function DriverDashboard() {
 
   return (
     <div className="dashboard">
-      <div className="dashboard__header">
-        <h2>Driver: {user?.employeeId}</h2>
-      </div>
+      <DashboardHeader
+        icon="🚌"
+        tone="driver"
+        title={`On the road -- ${user?.employeeId}`}
+        subtitle="Your location is shared live with waiting engineers and admin"
+      />
 
       {geoError && <div className="alert alert--error">Location error: {geoError}</div>}
       {!position && !geoError && <div className="alert alert--info">Getting your location...</div>}
 
       <div className="dashboard__stats">
         <StatCard
+          icon="🧍"
           label="Engineers waiting"
           value={riders.length}
           tone={riders.length > 0 ? "success" : "default"}
         />
-        <StatCard label="Your sharing status" value={position ? "Live" : "Waiting for GPS"} />
+        <StatCard
+          icon="📡"
+          label="Your sharing status"
+          value={position ? "Live" : "Waiting for GPS"}
+          live={Boolean(position)}
+        />
       </div>
 
       <MapView stops={stops} path={path} drivers={driverMarker} riders={riders} />
@@ -87,10 +97,18 @@ export function DriverDashboard() {
         {riders.length === 0 ? (
           <p className="muted">No one is currently waiting.</p>
         ) : (
-          <ul>
+          <ul className="waiting-list">
             {riders.map((rider) => (
-              <li key={rider.userId}>
-                {rider.employeeId} &middot; updated {new Date(rider.updatedAt).toLocaleTimeString()}
+              <li key={rider.userId} className="waiting-card">
+                <span className="waiting-card__avatar" aria-hidden="true">
+                  🧍
+                </span>
+                <div className="waiting-card__body">
+                  <span className="waiting-card__id">{rider.employeeId}</span>
+                  <span className="waiting-card__time">
+                    Updated {new Date(rider.updatedAt).toLocaleTimeString()}
+                  </span>
+                </div>
               </li>
             ))}
           </ul>
