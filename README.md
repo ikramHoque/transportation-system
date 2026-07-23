@@ -8,6 +8,8 @@ Live shuttle tracker for the company bus route **Notunbazar (Badda) → Sayednag
 
 No names are ever collected. The only identifier in the system is the company **employee ID**.
 
+For a step-by-step walkthrough of exactly how location tracking works — the geofence algorithm, auto-pickup detection, staleness handling, and how the route itself was generated — see [`docs/LOCATION_TRACKING.md`](docs/LOCATION_TRACKING.md).
+
 ## Tech stack
 
 | Layer     | Choice                                                              |
