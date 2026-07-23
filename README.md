@@ -103,10 +103,18 @@ npm run dev              # Vite dev server, port 5173, proxies /api and /socket.
 
 `backend/src/config/route.ts` is the single source of truth for the route, served to the frontend via `GET /api/route/stops`, which exposes two things:
 
-- `ROUTE_STOPS` — the 4 named stops (id, name, lat, lng), rendered as the pin markers on the map.
-- `ROUTE_PATH` — a dense (~95 point), road-following path connecting them in order, used for **both** the map's polyline *and* the geofence distance check (`backend/src/modules/location/location.service.ts`). Measuring against 4 straight lines between distant stops would both look wrong on the map and make the geofence reject riders standing on a real bend in the road that the straight line cuts across.
+- `ROUTE_STOPS` — 9 real, named stops (id, name, lat, lng) sourced from an actual Google Maps directions route (Notun Bazar → Vatara Police Station → Farazy Diagnostic & Hospital → Sayed Nagar Auto Stand → Oxford International School (Gulshan Campus) → Bashundhara Gate → GoKart Courtside → Feroza Garden → BJIT, Satarkul). Rendered as the pin markers on the map.
+- `ROUTE_PATH` — a dense (65-point), road-following path from the first to the last stop, used for **both** the map's polyline *and* the geofence distance check (`backend/src/modules/location/location.service.ts`).
 
-`ROUTE_PATH` was generated **once**, offline, via a driving-directions request against [OSRM's public routing API](https://project-osrm.org/) (no key required) over the `ROUTE_STOPS` coordinates, then hand-copied into the file — it is not fetched at runtime, so there's no external dependency in production. Both `ROUTE_STOPS` and `ROUTE_PATH` are still only as accurate as the underlying stop coordinates, which are **approximate placeholders** for the Badda–Satarkul corridor. Once you have surveyed coordinates for the real stops, update `ROUTE_STOPS` and regenerate `ROUTE_PATH` the same way (an OSRM request shaped like `https://router.project-osrm.org/route/v1/driving/{lng1},{lat1};{lng2},{lat2};...?overview=full&geometries=geojson`, with the resulting `geometry.coordinates` swapped from `[lng, lat]` to `{lat, lng}`).
+`ROUTE_PATH` was generated **once**, offline, via a driving-directions request against [OSRM's public routing API](https://project-osrm.org/) (no key required) — it is not fetched at runtime, so there's no external dependency in production. It's deliberately routed only between the first and last `ROUTE_STOPS` entry rather than through all 9 as mandatory waypoints: OSRM forces an explicit stop-and-loop maneuver at every waypoint passed in, and several of these stops sit close together on the same road, which produced ugly backtracking loops in the geometry when all 9 were included. Routing endpoint-to-endpoint instead avoids that; every named stop was verified to fall within ~30m of the resulting path, confirming it naturally passes by all of them anyway.
+
+To regenerate `ROUTE_PATH` after changing `ROUTE_STOPS` (e.g. correcting a stop or extending the route), request directions between just the new first and last stop:
+
+```
+https://router.project-osrm.org/route/v1/driving/{lng1},{lat1};{lng2},{lat2}?overview=full&geometries=geojson
+```
+
+then take `routes[0].geometry.coordinates`, swap each pair from `[lng, lat]` to `{lat, lng}`, and optionally decimate (drop points closer than ~15m to the previous kept point) before pasting into the file. Worth sanity-checking the result for backtracking (repeated coordinates) before shipping it, especially if you add via-waypoints back into the request.
 
 ## Security & hardening
 
