@@ -1,20 +1,40 @@
 import { Circle, MapContainer, Marker, Polyline, Tooltip, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import type { LatLng, LocationRecord, RouteStop } from "../types";
+import { getSessionVehicleEmoji } from "../utils/vehicle";
 
-function emojiIcon(emoji: string, size: number): L.DivIcon {
+function emojiIcon(emoji: string, size: number, animationClass?: string): L.DivIcon {
+  const glyphClass = animationClass ? ` ${animationClass}` : "";
   return L.divIcon({
-    html: `<span style="font-size:${size}px;line-height:1">${emoji}</span>`,
+    html: `<span class="map-emoji-icon__glyph${glyphClass}" style="font-size:${size}px;line-height:1">${emoji}</span>`,
     className: "map-emoji-icon",
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
 }
 
-const busIcon = emojiIcon("🚌", 30);
-const riderIcon = emojiIcon("🧍", 22);
+/** A Google-Maps-style "you are here" marker: a solid dot with a soft
+    pulsing halo, instead of a plain static emoji. */
+function selfMarkerIcon(): L.DivIcon {
+  return L.divIcon({
+    html: `
+      <span class="map-self-marker">
+        <span class="map-self-marker__pulse"></span>
+        <span class="map-self-marker__dot"></span>
+      </span>
+    `,
+    className: "map-self-marker-wrapper",
+    iconSize: [42, 42],
+    iconAnchor: [21, 21],
+  });
+}
+
+// Randomized once per browser tab -- different viewers may see the shuttle
+// as a bus, a car, a pickup, etc. Purely cosmetic variety.
+const busIcon = emojiIcon(getSessionVehicleEmoji(), 30, "anim-sway");
+const riderIcon = emojiIcon("🧍", 22, "anim-bounce");
 const stopIcon = emojiIcon("📍", 20);
-const selfIcon = emojiIcon("🔵", 18);
+const selfIcon = selfMarkerIcon();
 
 interface MapViewProps {
   stops: RouteStop[];

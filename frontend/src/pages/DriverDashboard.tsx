@@ -100,7 +100,7 @@ export function DriverDashboard() {
           <ul className="waiting-list">
             {riders.map((rider) => (
               <li key={rider.userId} className="waiting-card">
-                <span className="waiting-card__avatar" aria-hidden="true">
+                <span className="waiting-card__avatar anim-bounce" aria-hidden="true">
                   🧍
                 </span>
                 <div className="waiting-card__body">

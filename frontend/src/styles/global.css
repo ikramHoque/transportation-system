@@ -166,7 +166,13 @@ body {
   left: -12%;
   font-size: 1.6rem;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15));
-  animation: route-strip-drive 14s linear infinite;
+  transform-origin: 50% 90%;
+  /* Drives left-to-right (route-strip-drive) while gently rocking
+     (anim-sway, shared with the map's vehicle glyph) at the same time --
+     two animations on two different properties, no conflict. */
+  animation:
+    route-strip-drive 14s linear infinite,
+    anim-sway 2.2s ease-in-out infinite;
 }
 @keyframes route-strip-drive {
   from {
@@ -711,6 +717,99 @@ body {
   justify-content: center;
   background: transparent !important;
   border: none !important;
+}
+
+/* Shared idle motions for person/vehicle glyphs -- reused across the map
+   markers, waiting-list cards, and the route strip rather than redefined
+   per context. Bounce reads as a person shifting their weight while
+   waiting; sway reads as a vehicle gently rocking as it idles/drives. */
+.anim-bounce {
+  display: inline-block;
+  animation: anim-bounce 1.4s ease-in-out infinite;
+}
+@keyframes anim-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.anim-sway {
+  display: inline-block;
+  animation: anim-sway 2.2s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+@keyframes anim-sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-bounce,
+  .anim-sway {
+    animation: none;
+  }
+}
+
+/* "You are here" marker: a solid dot with a soft pulsing halo, replacing a
+   plain static emoji for the rider's own position on the map. */
+.map-self-marker-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+.map-self-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.map-self-marker__dot {
+  position: relative;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 3px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.map-self-marker__pulse {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.45);
+  animation: map-self-pulse 1.8s ease-out infinite;
+}
+@keyframes map-self-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-self-marker__pulse {
+    animation: none;
+    opacity: 0;
+  }
 }
 
 /* Rider list / admin panel */
