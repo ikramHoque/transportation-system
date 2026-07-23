@@ -1,9 +1,9 @@
-# Production overlay for a VM with only 22 (SSH) and 443 (HTTPS) meant to
-# be open to the world -- port 80 is also bound, but only ever serves the
-# Let's Encrypt ACME challenge and a redirect to HTTPS (see
-# frontend/nginx.prod.conf.template), and needs to be reachable from the
-# internet for certificate issuance/renewal. backend and db stay entirely
-# unexposed, exactly as in the base docker-compose.yml.
+# Production overlay: adds HTTPS (443) once a real domain (or an sslip.io
+# stand-in) exists. Port 80 -- already exposed by the base docker-compose.yml
+# -- keeps working underneath this: nginx.prod.conf.template repurposes it
+# to serve only the Let's Encrypt ACME challenge and a redirect to HTTPS,
+# so it stays reachable for certificate issuance/renewal. backend and db
+# stay entirely unexposed, exactly as in the base docker-compose.yml.
 #
 # Usage:
 #   cp .env.example .env   # then set DOMAIN, LETSENCRYPT_EMAIL, JWT_SECRET, etc.
@@ -11,12 +11,11 @@
 #   ./scripts/init-letsencrypt.sh          # one-time: obtains the first certificate
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# See README.md's "Production deployment on a VM" section for the full walkthrough.
+# See README.md's "Production deployment" section for the full walkthrough.
 
 services:
   frontend:
     ports:
-      - "80:80"
       - "443:443"
     volumes:
       - ./frontend/nginx.prod.conf.template:/etc/nginx/templates/default.conf.template:ro

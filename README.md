@@ -25,7 +25,7 @@ For a step-by-step walkthrough of exactly how location tracking works — the ge
 Browser (React SPA)
    │  HTTPS/WS (relative /api, /socket.io)
    ▼
-nginx (frontend container -- only :8080 exposed in dev, :80/:443 in production)
+nginx (frontend container -- :80 always exposed, :443 added once a domain exists)
    │  proxy_pass
    ▼
 Express API + Socket.IO (backend container, :4000 -- never exposed to the host)
@@ -68,7 +68,9 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Open **http://localhost:8080** (or whatever `APP_PORT` you set).
+Open **http://localhost** (plain port 80 by default — no `:8080` needed). This exact same command and file also works unchanged on a VM you don't have a domain for yet: it's reachable at `http://<vm-ip>` the moment the VM's firewall allows port 80 in, since "which address reaches this machine" is a network question, not something baked into the Docker config. Set `APP_PORT` in `.env` only if port 80 is already taken on your machine.
+
+**Testing from a phone on the same network?** Browsers only allow `navigator.geolocation` — the API this whole app runs on — over HTTPS or on `localhost`. A phone hitting `http://<your-pc's-LAN-IP>` is neither, so location sharing will likely be silently blocked there even though the page itself loads fine. For real GPS testing from another device, either use Chrome DevTools' location override while accessing via `localhost` on the same machine, or set the target device's browser to treat that specific origin as secure for testing (e.g. Chrome's `chrome://flags/#unsafely-treat-insecure-origin-as-secure`).
 
 The backend runs its own SQL migrations on startup (see `backend/src/db/migrations`), including a demo whitelist seed:
 
@@ -101,13 +103,27 @@ npm install
 npm run dev              # Vite dev server, port 5173, proxies /api and /socket.io to :4000
 ```
 
-## Production deployment on a VM (only 22 + 443 open)
+## Three ways this gets run, same two files
 
-For a VM whose firewall/security group only allows SSH (22) and HTTPS (443) inbound — port 80 also needs to be reachable, but only ever serves the Let's Encrypt ACME challenge and a redirect to HTTPS, never app traffic (`frontend/nginx.prod.conf.template`). `backend` and `db` are never port-mapped to the host in any configuration — only `frontend`/nginx is ever reachable from outside the Docker network, dev or prod.
+There are only ever **two** Compose files. Which one(s) you use maps directly to where you're running:
 
-**Prerequisites**: a domain name with DNS already pointed at the VM's public IP (Let's Encrypt cannot issue a certificate for a bare IP), and Docker + Docker Compose installed.
+| Where | Command | URL |
+|---|---|---|
+| Your local PC | `docker compose up -d --build` | `http://localhost/...` (or `http://<your-pc's-LAN-IP>/...` from another device) |
+| A VM, no domain yet | *the exact same command* | `http://<vm-public-ip>/...` |
+| A VM with a domain (or sslip.io) | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` | `https://<domain>/...` |
 
-**No domain yet, only the VM's IP?** This matters for more than the padlock icon: modern browsers only allow `navigator.geolocation` — the API this whole app runs on — on a secure context (HTTPS, or `localhost`). Serving over plain HTTP on a public IP would likely get location sharing silently blocked by the browser, breaking the core feature. Rather than skip HTTPS, use **[sslip.io](https://sslip.io)**: a free service that maps a hostname like `203.0.113.10.sslip.io` directly to that IP via DNS. It presents as a normal domain to Let's Encrypt, so you get a real, browser-trusted certificate with no warnings — just set:
+The first two rows are **the same config** — `docker-compose.yml` always exposes plain HTTP on port 80 (`db` and `backend` are never port-mapped to the host in any of these, only `frontend`/nginx is ever reachable). "Local PC" vs. "VM without a domain" isn't a Docker distinction at all; it's just which network address happens to reach that machine — your own LAN IP for a laptop, the VM's public IP for a VM. Nothing in the compose file needs to know or care which one you're using.
+
+The third row layers `docker-compose.prod.yml` on top, which only *adds* things: port 443 with TLS termination, and a `certbot` service for the certificate. Port 80 keeps working underneath it too — `frontend/nginx.prod.conf.template` just repurposes it to serve the Let's Encrypt ACME challenge and redirect everything else to HTTPS, instead of serving the app directly.
+
+**Don't run `docker compose -f docker-compose.prod.yml up` by itself** — that file is an overlay, not a standalone project (it has no `build:`/`image:` for `frontend` and doesn't define `backend`/`db` at all). It only works layered on the base file with both `-f` flags, as shown above.
+
+### Going from HTTP to HTTPS
+
+**Prerequisites**: a domain name (or an sslip.io stand-in, see below) with DNS pointed at the VM's public IP — Let's Encrypt cannot issue a certificate for a bare IP.
+
+**No domain yet, only the VM's IP?** This matters for more than the padlock icon: browsers only allow `navigator.geolocation` — the API this whole app runs on — on a secure context (HTTPS, or `localhost`). A phone or browser hitting the VM over plain HTTP on its public IP will likely have location sharing silently blocked, breaking the core feature. Rather than wait, use **[sslip.io](https://sslip.io)**: a free service that maps a hostname like `203.0.113.10.sslip.io` directly to that IP via DNS. It presents as a normal domain to Let's Encrypt, so you get a real, browser-trusted certificate with no warnings — just set:
 
 ```
 DOMAIN=<your-vm-public-ip-with-dots>.sslip.io
@@ -140,8 +156,6 @@ Your app is now served at `https://<DOMAIN>`.
 ```
 0 3 * * * cd /path/to/BJIT-Transportation-System && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec frontend nginx -s reload
 ```
-
-**Why two Compose files, not one**: `docker-compose.yml` has no port mapping for `frontend` at all. Plain `docker compose up` (no `-f` flags) auto-loads `docker-compose.override.yml` alongside it, which adds the `${APP_PORT:-8080}:80` mapping used for local dev/testing. `docker-compose.prod.yml`, applied explicitly via `-f`, adds `80:80` + `443:443` plus the `certbot` service instead. Explicitly passing `-f` flags is what keeps `docker-compose.override.yml` from being auto-included — mixing it in would leave port 8080 *also* bound in production, since Compose merges list fields like `ports` across files rather than replacing them.
 
 ## Configuring the real route
 
