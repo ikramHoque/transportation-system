@@ -5,19 +5,25 @@ import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { fetchWaitingRiders } from "../api/location";
-import { fetchRouteStops } from "../api/route";
-import type { LocationRecord, RouteStop } from "../types";
+import { fetchRoute } from "../api/route";
+import type { LatLng, LocationRecord, RouteStop } from "../types";
 
 export function DriverDashboard() {
   const { user } = useAuth();
   const socket = useSocket();
   const [stops, setStops] = useState<RouteStop[]>([]);
+  const [path, setPath] = useState<LatLng[]>([]);
   const [riders, setRiders] = useState<LocationRecord[]>([]);
 
   const { position, error: geoError } = useGeolocation({ enabled: true, intervalMs: 5000 });
 
   useEffect(() => {
-    fetchRouteStops().then(setStops).catch(() => {});
+    fetchRoute()
+      .then((route) => {
+        setStops(route.stops);
+        setPath(route.path);
+      })
+      .catch(() => {});
     fetchWaitingRiders()
       .then((res) => setRiders(res.riders))
       .catch(() => {});
@@ -74,7 +80,7 @@ export function DriverDashboard() {
         <StatCard label="Your sharing status" value={position ? "Live" : "Waiting for GPS"} />
       </div>
 
-      <MapView stops={stops} drivers={driverMarker} riders={riders} />
+      <MapView stops={stops} path={path} drivers={driverMarker} riders={riders} />
 
       <div className="rider-list">
         <h3>Waiting list</h3>

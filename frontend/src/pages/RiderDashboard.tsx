@@ -5,13 +5,14 @@ import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { fetchDriverLocations } from "../api/location";
-import { fetchRouteStops } from "../api/route";
-import type { LocationRecord, RouteStop } from "../types";
+import { fetchRoute } from "../api/route";
+import type { LatLng, LocationRecord, RouteStop } from "../types";
 
 export function RiderDashboard() {
   const { user } = useAuth();
   const socket = useSocket();
   const [stops, setStops] = useState<RouteStop[]>([]);
+  const [path, setPath] = useState<LatLng[]>([]);
   const [drivers, setDrivers] = useState<LocationRecord[]>([]);
   const [isWaiting, setIsWaiting] = useState(false);
   const [outOfRangeMessage, setOutOfRangeMessage] = useState<string | null>(null);
@@ -20,7 +21,12 @@ export function RiderDashboard() {
   const { position, error: geoError } = useGeolocation({ enabled: isWaiting, intervalMs: 20000 });
 
   useEffect(() => {
-    fetchRouteStops().then(setStops).catch(() => {});
+    fetchRoute()
+      .then((route) => {
+        setStops(route.stops);
+        setPath(route.path);
+      })
+      .catch(() => {});
     fetchDriverLocations().then(setDrivers).catch(() => {});
   }, []);
 
@@ -93,7 +99,7 @@ export function RiderDashboard() {
         )}
       </div>
 
-      <MapView stops={stops} drivers={drivers} />
+      <MapView stops={stops} path={path} drivers={drivers} />
     </div>
   );
 }

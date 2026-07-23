@@ -1,5 +1,5 @@
 import { pool } from "../../db/pool";
-import { ROUTE_GEOFENCE_RADIUS_METERS, ROUTE_STOPS } from "../../config/route";
+import { ROUTE_GEOFENCE_RADIUS_METERS, ROUTE_PATH } from "../../config/route";
 import { PICKUP_DWELL_SECONDS, PICKUP_RADIUS_METERS } from "../../config/tracking";
 import { distanceBetweenPointsMeters, distanceToPathMeters } from "../../utils/geo";
 import type { AuthenticatedUser, LocationRecord } from "../../types";
@@ -40,7 +40,7 @@ export interface UpsertLocationResult {
 
 /** Rider locations further than this from the route polyline are never counted as "waiting". */
 function isWithinRouteGeofence(lat: number, lng: number): boolean {
-  const distance = distanceToPathMeters({ lat, lng }, ROUTE_STOPS);
+  const distance = distanceToPathMeters({ lat, lng }, ROUTE_PATH);
   return distance <= ROUTE_GEOFENCE_RADIUS_METERS;
 }
 

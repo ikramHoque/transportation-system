@@ -23,6 +23,11 @@ export interface RouteStop {
   lng: number;
 }
 
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
 export interface AllowedEmployee {
   employee_id: string;
   role: UserRole;

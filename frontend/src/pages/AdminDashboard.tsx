@@ -3,16 +3,17 @@ import { MapView } from "../components/MapView";
 import { StatCard } from "../components/StatCard";
 import { useSocket } from "../context/SocketContext";
 import { fetchSummary } from "../api/location";
-import { fetchRouteStops } from "../api/route";
+import { fetchRoute } from "../api/route";
 import { addAllowedEmployee, fetchAllowedEmployees, removeAllowedEmployee } from "../api/employees";
 import { extractErrorMessage } from "../api/client";
-import type { AllowedEmployee, LocationRecord, RouteStop, UserRole } from "../types";
+import type { AllowedEmployee, LatLng, LocationRecord, RouteStop, UserRole } from "../types";
 
 const ROLE_OPTIONS: UserRole[] = ["engineer", "staff", "driver", "admin"];
 
 export function AdminDashboard() {
   const socket = useSocket();
   const [stops, setStops] = useState<RouteStop[]>([]);
+  const [path, setPath] = useState<LatLng[]>([]);
   const [drivers, setDrivers] = useState<LocationRecord[]>([]);
   const [riders, setRiders] = useState<LocationRecord[]>([]);
   const [employees, setEmployees] = useState<AllowedEmployee[]>([]);
@@ -26,7 +27,12 @@ export function AdminDashboard() {
   }
 
   useEffect(() => {
-    fetchRouteStops().then(setStops).catch(() => {});
+    fetchRoute()
+      .then((route) => {
+        setStops(route.stops);
+        setPath(route.path);
+      })
+      .catch(() => {});
     fetchSummary()
       .then((res) => {
         setDrivers(res.drivers);
@@ -90,7 +96,7 @@ export function AdminDashboard() {
         <StatCard label="Engineers waiting" value={riders.length} tone={riders.length > 0 ? "success" : "default"} />
       </div>
 
-      <MapView stops={stops} drivers={drivers} riders={riders} />
+      <MapView stops={stops} path={path} drivers={drivers} riders={riders} />
 
       <section className="admin-panel">
         <h3>Employee whitelist</h3>

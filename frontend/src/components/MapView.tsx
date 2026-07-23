@@ -1,6 +1,6 @@
 import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
-import type { LocationRecord, RouteStop } from "../types";
+import type { LatLng, LocationRecord, RouteStop } from "../types";
 
 function emojiIcon(emoji: string, size: number): L.DivIcon {
   return L.divIcon({
@@ -17,15 +17,19 @@ const stopIcon = emojiIcon("📍", 20);
 
 interface MapViewProps {
   stops: RouteStop[];
+  /** Dense, road-following points for the route line; falls back to straight lines between `stops` if omitted. */
+  path?: LatLng[];
   drivers?: LocationRecord[];
   riders?: LocationRecord[];
   height?: string;
 }
 
-export function MapView({ stops, drivers = [], riders = [], height = "60vh" }: MapViewProps) {
+export function MapView({ stops, path, drivers = [], riders = [], height = "60vh" }: MapViewProps) {
   const center: [number, number] = stops.length
     ? [stops[Math.floor(stops.length / 2)].lat, stops[Math.floor(stops.length / 2)].lng]
     : [23.78, 90.43];
+
+  const linePositions = path && path.length > 1 ? path : stops;
 
   return (
     <div className="map-view" style={{ height }}>
@@ -35,9 +39,9 @@ export function MapView({ stops, drivers = [], riders = [], height = "60vh" }: M
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {stops.length > 1 && (
+        {linePositions.length > 1 && (
           <Polyline
-            positions={stops.map((stop) => [stop.lat, stop.lng])}
+            positions={linePositions.map((point) => [point.lat, point.lng])}
             pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.6 }}
           />
         )}

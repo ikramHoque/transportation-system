@@ -101,7 +101,12 @@ npm run dev              # Vite dev server, port 5173, proxies /api and /socket.
 
 ## Configuring the real route
 
-`backend/src/config/route.ts` is the single source of truth for the stop list (id, name, lat, lng), served to the frontend via `GET /api/route/stops`. The coordinates shipped are **approximate placeholders** for the Badda–Satarkul corridor — replace them with surveyed coordinates for your actual stops before relying on the map for anything beyond a demo.
+`backend/src/config/route.ts` is the single source of truth for the route, served to the frontend via `GET /api/route/stops`, which exposes two things:
+
+- `ROUTE_STOPS` — the 4 named stops (id, name, lat, lng), rendered as the pin markers on the map.
+- `ROUTE_PATH` — a dense (~95 point), road-following path connecting them in order, used for **both** the map's polyline *and* the geofence distance check (`backend/src/modules/location/location.service.ts`). Measuring against 4 straight lines between distant stops would both look wrong on the map and make the geofence reject riders standing on a real bend in the road that the straight line cuts across.
+
+`ROUTE_PATH` was generated **once**, offline, via a driving-directions request against [OSRM's public routing API](https://project-osrm.org/) (no key required) over the `ROUTE_STOPS` coordinates, then hand-copied into the file — it is not fetched at runtime, so there's no external dependency in production. Both `ROUTE_STOPS` and `ROUTE_PATH` are still only as accurate as the underlying stop coordinates, which are **approximate placeholders** for the Badda–Satarkul corridor. Once you have surveyed coordinates for the real stops, update `ROUTE_STOPS` and regenerate `ROUTE_PATH` the same way (an OSRM request shaped like `https://router.project-osrm.org/route/v1/driving/{lng1},{lat1};{lng2},{lat2};...?overview=full&geometries=geojson`, with the resulting `geometry.coordinates` swapped from `[lng, lat]` to `{lat, lng}`).
 
 ## Security & hardening
 
