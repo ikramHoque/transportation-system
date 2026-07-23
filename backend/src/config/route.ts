@@ -1,7 +1,7 @@
 /**
  * Single source of truth for the fixed shuttle route so backend and frontend
  * never disagree on stop order/coordinates. Notunbazar -> Satarkul, sourced
- * from two real Google Maps directions routes (12 named stops with precise
+ * from real Google Maps directions/places (13 named stops with precise
  * coordinates, merged and deduplicated) rather than approximated.
  */
 export interface RouteStop {
@@ -17,7 +17,13 @@ export interface LatLng {
 }
 
 export const ROUTE_STOPS: RouteStop[] = [
-  { id: "notunbazar", name: "Notun Bazar", lat: 23.7978186, lng: 90.4236046 },
+  { id: "notunbazar", name: "Notun Bazar Bus Stand", lat: 23.797894, lng: 90.423578 },
+  {
+    id: "jamia-madrasha",
+    name: "Jamia Madrasha (Jamia Madania Baridhara Mosque)",
+    lat: 23.7984014,
+    lng: 90.4235979,
+  },
   { id: "vatara-police-station", name: "Vatara Police Station", lat: 23.797572, lng: 90.4240385 },
   { id: "farazy-hospital", name: "Farazy Diagnostic & Hospital, Natun Bazar", lat: 23.7980155, lng: 90.4278257 },
   { id: "sayednagar", name: "Sayed Nagar Auto Stand", lat: 23.7986813, lng: 90.4348793 },
@@ -57,6 +63,11 @@ export const ROUTE_GEOFENCE_RADIUS_METERS = 500;
  * backtracking loops in the geometry. Verified instead that every named
  * stop in ROUTE_STOPS falls within ~30m of this path, confirming it
  * naturally passes by all of them anyway.
+ *
+ * Exception: "Jamia Madrasha" sits ~65m off this path (it's set back from
+ * the main road near the start of the route) -- well within
+ * ROUTE_GEOFENCE_RADIUS_METERS so it doesn't affect "waiting" detection,
+ * just looser than the ~30m the other stops happen to satisfy.
  */
 export const ROUTE_PATH: LatLng[] = [
   { lat: 23.797815, lng: 90.423581 }, { lat: 23.797875, lng: 90.424145 }, { lat: 23.798131, lng: 90.425625 },

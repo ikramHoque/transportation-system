@@ -1,4 +1,5 @@
-import { Circle, MapContainer, Marker, Polyline, Tooltip, TileLayer } from "react-leaflet";
+import { useEffect, useMemo } from "react";
+import { Circle, MapContainer, Marker, Polyline, Tooltip, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { LatLng, LocationRecord, RouteStop } from "../types";
 import { getSessionVehicleEmoji } from "../utils/vehicle";
@@ -36,6 +37,24 @@ const riderIcon = emojiIcon("🧍", 22, "anim-bounce");
 const stopIcon = emojiIcon("📍", 20);
 const selfIcon = selfMarkerIcon();
 
+/**
+ * MapContainer only reads its center/zoom/bounds props once, at mount --
+ * it doesn't reactively re-apply them on prop changes. Since `stops`/`path`
+ * arrive from an async fetch, the map would otherwise mount against the
+ * fallback center (still the only option at that instant) and then just
+ * sit there, never adjusting once the real route loads. This re-fits the
+ * view imperatively whenever `bounds` actually changes to a real value.
+ */
+function FitBoundsOnLoad({ bounds }: { bounds: L.LatLngBounds | undefined }) {
+  const map = useMap();
+  useEffect(() => {
+    if (bounds && bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [24, 24] });
+    }
+  }, [map, bounds]);
+  return null;
+}
+
 interface MapViewProps {
   stops: RouteStop[];
   /** Dense, road-following points for the route line; falls back to straight lines between `stops` if omitted. */
@@ -64,9 +83,23 @@ export function MapView({
 
   const linePositions = path && path.length > 1 ? path : stops;
 
+  // Stable across re-renders as long as `linePositions` itself is (i.e. the
+  // route data hasn't actually changed) -- otherwise a fresh LatLngBounds
+  // instance on every render would re-trigger the fit effect below on every
+  // unrelated update (driver/rider location ticks), fighting any manual pan
+  // or zoom the viewer just did.
+  const bounds = useMemo(
+    () =>
+      linePositions.length > 1
+        ? L.latLngBounds(linePositions.map((point): [number, number] => [point.lat, point.lng]))
+        : undefined,
+    [linePositions],
+  );
+
   return (
     <div className="map-view" style={{ height }}>
       <MapContainer center={center} zoom={14} style={{ height: "100%", width: "100%" }}>
+        <FitBoundsOnLoad bounds={bounds} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -75,7 +108,7 @@ export function MapView({
         {linePositions.length > 1 && (
           <Polyline
             positions={linePositions.map((point) => [point.lat, point.lng])}
-            pathOptions={{ color: "#2563eb", weight: 4, opacity: 0.6 }}
+            pathOptions={{ color: "#1e3a8a", weight: 5, opacity: 0.85 }}
           />
         )}
 
