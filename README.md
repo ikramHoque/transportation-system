@@ -155,6 +155,16 @@ Your app is now served at `https://<DOMAIN>`.
 0 3 * * * cd /path/to/BJIT-Transportation-System && docker compose -f docker-compose.prod.yml exec frontend nginx -s reload
 ```
 
+### Testing on a phone without a domain or VM
+
+Geolocation requires a secure context, so `http://<your-lan-ip>/rider` on a
+phone will fail with `Only secure origins are allowed` even though
+`http://localhost` works fine on your own machine — and the Let's Encrypt
+path above doesn't apply here since a LAN IP isn't publicly reachable. See
+[docs/CLOUDFLARE_TUNNEL.md](docs/CLOUDFLARE_TUNNEL.md) for a quick,
+account-less way to get a real `https://` URL pointed at your local stack for
+this kind of ad-hoc device testing.
+
 ## Configuring the real route
 
 `backend/src/config/route.ts` is the single source of truth for the route, served to the frontend via `GET /api/route/stops`, which exposes two things:
