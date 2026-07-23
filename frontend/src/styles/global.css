@@ -160,33 +160,87 @@ body {
   left: 88%;
 }
 
-.route-strip__bus {
+/* A little fleet of vehicles, each independently driving the strip and
+   pausing briefly at every stop (as if picking someone up) before moving
+   on to the next one, then exiting and looping. Most vehicle emoji face
+   left by default across platforms -- flipped horizontally with a
+   constant scaleX(-1) so they visibly face the direction they're actually
+   travelling (left to right) instead of appearing to drive backwards. */
+.route-strip__vehicle {
   position: absolute;
   bottom: 2px;
   left: -12%;
   font-size: 1.6rem;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15));
-  transform-origin: 50% 90%;
-  /* Drives left-to-right (route-strip-drive) while gently rocking
-     (anim-sway, shared with the map's vehicle glyph) at the same time --
-     two animations on two different properties, no conflict. */
-  animation:
-    route-strip-drive 14s linear infinite,
-    anim-sway 2.2s ease-in-out infinite;
+  transform: scaleX(-1);
+  animation-name: route-strip-vehicle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
 }
-@keyframes route-strip-drive {
-  from {
+@keyframes route-strip-vehicle {
+  0% {
     left: -12%;
   }
-  to {
+  8% {
+    left: 12%;
+  }
+  14% {
+    left: 12%;
+  }
+  24% {
+    left: 38%;
+  }
+  30% {
+    left: 38%;
+  }
+  40% {
+    left: 64%;
+  }
+  46% {
+    left: 64%;
+  }
+  56% {
+    left: 88%;
+  }
+  62% {
+    left: 88%;
+  }
+  78% {
+    left: 112%;
+  }
+  100% {
     left: 112%;
   }
 }
 
+/* Different duration + a negative delay (starts mid-cycle immediately)
+   per vehicle so the fleet drifts in and out of sync over time instead of
+   moving in an obviously repeating lockstep. */
+.route-strip__vehicle--1 {
+  animation-duration: 19s;
+  animation-delay: -2s;
+}
+.route-strip__vehicle--2 {
+  animation-duration: 23s;
+  animation-delay: -9s;
+}
+.route-strip__vehicle--3 {
+  animation-duration: 27s;
+  animation-delay: -16s;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .route-strip__bus {
+  .route-strip__vehicle {
     animation: none;
-    left: 46%;
+  }
+  .route-strip__vehicle--1 {
+    left: 12%;
+  }
+  .route-strip__vehicle--2 {
+    left: 64%;
+  }
+  .route-strip__vehicle--3 {
+    left: 88%;
   }
 }
 
